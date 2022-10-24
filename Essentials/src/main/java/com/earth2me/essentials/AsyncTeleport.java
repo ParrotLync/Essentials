@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -414,31 +415,43 @@ public class AsyncTeleport implements IAsyncTeleport {
     }
 
     @Override
-    public void warp(final IUser otherUser, String warp, final Trade chargeFor, final TeleportCause cause, final CompletableFuture<Boolean> future) {
-        final UserWarpEvent event = new UserWarpEvent(otherUser, warp, chargeFor);
-        Bukkit.getServer().getPluginManager().callEvent(event);
-        if (event.isCancelled()) {
-            return;
+    public void warp(final IUser otherUser, String oWarp, final Trade chargeFor, final TeleportCause cause, final CompletableFuture<Boolean> future) {
+        if (otherUser.getBase().getVehicle() != null) {
+            otherUser.getBase().leaveVehicle();
         }
 
-        warp = event.getWarp();
-        final Location loc;
-        try {
-            loc = ess.getWarps().getWarp(warp);
-        } catch (final WarpNotFoundException | InvalidWorldException e) {
-            future.completeExceptionally(e);
-            return;
-        }
-        final String finalWarp = warp;
-        future.thenAccept(success -> {
-            if (success) {
-                otherUser.sendMessage(tl("warpingTo", finalWarp, loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
-                if (!otherUser.equals(teleportOwner)) {
-                    teleportOwner.sendMessage(tl("warpingTo", finalWarp, loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+        final String fWarp = oWarp;
+        Bukkit.getScheduler().runTaskLater(Objects.requireNonNull(Bukkit.getPluginManager().getPlugin("Essentials")), new Runnable() {
+            private String warp = fWarp;
+
+            @Override
+            public void run() {
+                final UserWarpEvent event = new UserWarpEvent(otherUser, warp, chargeFor);
+                Bukkit.getServer().getPluginManager().callEvent(event);
+                if (event.isCancelled()) {
+                    return;
                 }
+
+                warp = event.getWarp();
+                final Location loc;
+                try {
+                    loc = ess.getWarps().getWarp(warp);
+                } catch (final WarpNotFoundException | InvalidWorldException e) {
+                    future.completeExceptionally(e);
+                    return;
+                }
+                final String finalWarp = warp;
+                future.thenAccept(success -> {
+                    if (success) {
+                        otherUser.sendMessage(tl("warpingTo", finalWarp, loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+                        if (!otherUser.equals(teleportOwner)) {
+                            teleportOwner.sendMessage(tl("warpingTo", finalWarp, loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+                        }
+                    }
+                });
+                teleport(otherUser, new LocationTarget(loc), chargeFor, cause, future);
             }
-        });
-        teleport(otherUser, new LocationTarget(loc), chargeFor, cause, future);
+        }, 1);
     }
 
     @Override

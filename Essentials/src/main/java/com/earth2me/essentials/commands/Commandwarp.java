@@ -7,7 +7,6 @@ import com.earth2me.essentials.api.IWarps;
 import com.earth2me.essentials.utils.NumberUtil;
 import com.earth2me.essentials.utils.StringUtil;
 import net.ess3.api.IUser;
-import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 
@@ -17,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Collections;
 import java.util.stream.Collectors;
-import java.util.Objects;
 
 import static com.earth2me.essentials.I18n.tl;
 
@@ -99,11 +97,7 @@ public class Commandwarp extends EssentialsCommand {
             throw new Exception(tl("warpUsePermission"));
         }
 
-        if (user.getBase().getVehicle() != null) {
-            user.getBase().getVehicle().eject();
-        }
-
-        Bukkit.getScheduler().runTaskLater(Objects.requireNonNull(Bukkit.getPluginManager().getPlugin("Essentials")), () -> owner.getAsyncTeleport().warp(user, name, charge, TeleportCause.COMMAND, getNewExceptionFuture(user.getSource(), commandLabel)), 1);
+        owner.getAsyncTeleport().warp(user, name, charge, TeleportCause.COMMAND, getNewExceptionFuture(user.getSource(), commandLabel));
     }
 
     private List<String> getAvailableWarpsFor(final IUser user) {
